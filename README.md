@@ -37,7 +37,7 @@ dotnet test
 ### Run Demo
 
 ```bash
-dotnet run --project src/PosTerminal
+dotnet run --project src/PosTerminal.Console
 ```
 
 ## 💡 Usage Example
@@ -89,7 +89,6 @@ src/
     ├── Models/                # Product, VolumePricing
     ├── Services/              # PricingCalculator
     ├── PointOfSaleTerminal.cs # Main API
-    └── Program.cs             # Demo
 └── PosTerminal.Console/
     └── Program.cs             # Demo
 tests/
