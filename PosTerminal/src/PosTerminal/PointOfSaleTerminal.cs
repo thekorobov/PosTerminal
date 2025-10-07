@@ -74,19 +74,65 @@ public sealed class PointOfSaleTerminal
     }
 
     /// <summary>
+    /// Calculates the total price for all scanned items with discount card applied.
+    /// </summary>
+    /// <param name="card">The discount card to apply. The card's accumulated amount will be updated after calculation.</param>
+    /// <returns>The total price with discount card applied.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when card is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no pricing has been set.</exception>
+    /// <remarks>
+    /// The discount card percentage is calculated based on the card's current accumulated amount.
+    /// Only items sold at unit price (without volume discount) are eligible for card discount.
+    /// After calculation, the gross sale amount (without any discounts) is added to the card.
+    /// </remarks>
+    public decimal CalculateTotal(DiscountCard card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        EnsurePricingConfigured();
+        if (_scannedItems.Count == 0) return 0m;
+
+        var breakdown = CalculateDetailedBreakdown();
+
+        decimal cardDiscount = breakdown.CardEligibleAmount * card.GetPercent();
+        decimal finalTotal = breakdown.TotalPrice - cardDiscount;
+
+        card.Accumulate(breakdown.GrossAmount);
+
+        return finalTotal;
+    }
+
+    /// <summary>
     /// Clears all scanned items from the current transaction to start a new transaction.
     /// </summary>
     public void Clear() => _scannedItems.Clear();
+
+    private PricingBreakdown CalculateDetailedBreakdown()
+    {
+        decimal totalPrice = 0m;
+        decimal cardEligibleAmount = 0m;
+        decimal grossAmount = 0m;
+
+        foreach (var (code, quantity) in _scannedItems)
+        {
+            var product = _products[code];
+            var breakdown = _pricingCalculator.CalculateBreakdown(product, quantity);
+            totalPrice += breakdown.TotalPrice;
+            cardEligibleAmount += breakdown.CardEligibleAmount;
+            grossAmount += breakdown.GrossAmount;
+        }
+
+        return new PricingBreakdown(totalPrice, cardEligibleAmount, grossAmount);
+    }
 
     private static List<Product> ValidateProducts(IEnumerable<Product> products)
     {
         ArgumentNullException.ThrowIfNull(products);
 
         var list = products as List<Product> ?? products.ToList();
-        if (list.Count == 0)
-            throw new ArgumentException("Products collection cannot be empty.", nameof(products));
 
-        return list;
+        return list.Count == 0 
+            ? throw new ArgumentException("Products collection cannot be empty.", nameof(products)) 
+            : list;
     }
 
     private static Dictionary<string, Product> BuildProductDictionary(IEnumerable<Product> products)
@@ -110,4 +156,3 @@ public sealed class PointOfSaleTerminal
 
     private void IncrementQuantity(string code) => _scannedItems[code] = _scannedItems.GetValueOrDefault(code) + 1;
 }
-
