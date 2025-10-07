@@ -10,24 +10,22 @@ public class PointOfSaleTerminalTests
         var products = new[]
         {
             new Product("A", 1.25m, new VolumePricing(3, 3.00m)), // $1.25 or $3 for a three-pack
-            new Product("B", 4.25m),                              // $4.25 per unit
+            new Product("B", 4.25m), // $4.25 per unit
             new Product("C", 1.00m, new VolumePricing(6, 5.00m)), // $1.00 or $5 for a six-pack
-            new Product("D", 0.75m)                               // $0.75 per unit
+            new Product("D", 0.75m) // $0.75 per unit
         };
         terminal.SetPricing(products);
         return terminal;
     }
+
+    #region SetPricing
 
     [Fact]
     public void SetPricing_WithValidProducts_ShouldConfigureTerminal()
     {
         // Arrange
         var terminal = new PointOfSaleTerminal();
-        var products = new[]
-        {
-            new Product("A", 1.25m),
-            new Product("B", 4.25m)
-        };
+        var products = new[] { new Product("A", 1.25m), new Product("B", 4.25m) };
 
         // Act & Assert
         terminal.SetPricing(products);
@@ -59,15 +57,46 @@ public class PointOfSaleTerminalTests
     {
         // Arrange
         var terminal = new PointOfSaleTerminal();
-        var products = new[]
-        {
-            new Product("A", 1.25m),
-            new Product("A", 2.00m)
-        };
+        var products = new[] { new Product("A", 1.25m), new Product("A", 2.00m) };
 
         // Act & Assert
         Should.Throw<ArgumentException>(() => terminal.SetPricing(products))
             .Message.ShouldContain("Duplicate product code found: A");
+    }
+
+    [Fact]
+    public void SetPricing_WhenActiveTransactionExists_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        terminal.Scan("A");
+
+        var newProducts = new[] { new Product("X", 1.00m), new Product("Y", 2.00m) };
+
+        // Act & Assert
+        var exception = Should.Throw<InvalidOperationException>(() => terminal.SetPricing(newProducts));
+        exception.Message.ShouldBe("Cannot change pricing during active transaction. Call Clear() first.");
+    }
+
+    #endregion
+
+    #region Scan
+
+    [Fact]
+    public void Scan_MultipleItemsSameProduct_ShouldAccumulateQuantity()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+
+        // Act
+        terminal.Scan("A");
+        terminal.Scan("A");
+        terminal.Scan("A");
+        decimal result = terminal.CalculateTotal();
+
+        // Assert
+        // 3 A items should use volume pricing: $3.00
+        result.ShouldBe(3.00m);
     }
 
     [Theory]
@@ -95,29 +124,9 @@ public class PointOfSaleTerminalTests
             .Message.ShouldContain("Product code 'X' not found");
     }
 
-    [Fact]
-    public void CalculateTotal_WithoutPricingSet_ShouldThrowInvalidOperationException()
-    {
-        // Arrange
-        var terminal = new PointOfSaleTerminal();
+    #endregion
 
-        // Act & Assert
-        Should.Throw<InvalidOperationException>(() => terminal.CalculateTotal())
-            .Message.ShouldContain("No pricing configuration set");
-    }
-
-    [Fact]
-    public void CalculateTotal_WithNoItemsScanned_ShouldReturnZero()
-    {
-        // Arrange
-        var terminal = CreateTerminalWithStandardPricing();
-
-        // Act
-        decimal result = terminal.CalculateTotal();
-
-        // Assert
-        result.ShouldBe(0m);
-    }
+    #region Clear
 
     [Fact]
     public void Clear_ShouldRemoveAllScannedItems()
@@ -135,6 +144,10 @@ public class PointOfSaleTerminalTests
         result.ShouldBe(0m);
     }
 
+    #endregion
+
+    #region CalculateTotal
+
     // Test Case 1: AAAABCDAAA should total $13.25
     [Fact]
     public void CalculateTotal_TestCase1_AAAABCDAAA_ShouldReturn1325()
@@ -148,6 +161,7 @@ public class PointOfSaleTerminalTests
         {
             terminal.Scan(item.ToString());
         }
+
         decimal result = terminal.CalculateTotal();
 
         // Assert
@@ -172,6 +186,7 @@ public class PointOfSaleTerminalTests
         {
             terminal.Scan(item.ToString());
         }
+
         decimal result = terminal.CalculateTotal();
 
         // Assert
@@ -192,6 +207,7 @@ public class PointOfSaleTerminalTests
         {
             terminal.Scan(item.ToString());
         }
+
         decimal result = terminal.CalculateTotal();
 
         // Assert
@@ -201,23 +217,6 @@ public class PointOfSaleTerminalTests
         // D: 1 item = $0.75
         // Total: $1.25 + $4.25 + $1.00 + $0.75 = $7.25
         result.ShouldBe(7.25m);
-    }
-
-    [Fact]
-    public void Scan_MultipleItemsSameProduct_ShouldAccumulateQuantity()
-    {
-        // Arrange
-        var terminal = CreateTerminalWithStandardPricing();
-
-        // Act
-        terminal.Scan("A");
-        terminal.Scan("A");
-        terminal.Scan("A");
-        decimal result = terminal.CalculateTotal();
-
-        // Assert
-        // 3 A items should use volume pricing: $3.00
-        result.ShouldBe(3.00m);
     }
 
     [Fact]
@@ -239,20 +238,176 @@ public class PointOfSaleTerminalTests
     }
 
     [Fact]
-    public void SetPricing_WhenActiveTransactionExists_ShouldThrowInvalidOperationException()
+    public void CalculateTotal_WithoutPricingSet_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var terminal = new PointOfSaleTerminal();
+
+        // Act & Assert
+        Should.Throw<InvalidOperationException>(() => terminal.CalculateTotal())
+            .Message.ShouldContain("No pricing configuration set");
+    }
+
+    [Fact]
+    public void CalculateTotal_WithNoItemsScanned_ShouldReturnZero()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+
+        // Act
+        decimal result = terminal.CalculateTotal();
+
+        // Assert
+        result.ShouldBe(0m);
+    }
+
+    #endregion
+
+    #region CalculateTotal with DiscountCard
+
+    [Fact]
+    public void CalculateTotal_WithNullDiscountCard_ShouldThrowArgumentNullException()
     {
         // Arrange
         var terminal = CreateTerminalWithStandardPricing();
         terminal.Scan("A");
 
-        var newProducts = new[]
-        {
-            new Product("X", 1.00m),
-            new Product("Y", 2.00m)
-        };
-
         // Act & Assert
-        var exception = Should.Throw<InvalidOperationException>(() => terminal.SetPricing(newProducts));
-        exception.Message.ShouldBe("Cannot change pricing during active transaction. Call Clear() first.");
+        Should.Throw<ArgumentNullException>(() => terminal.CalculateTotal(null!));
     }
+
+    [Fact]
+    public void CalculateTotal_WithDiscountCard_NoItemsScanned_ShouldReturnZero()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        var card = new DiscountCard();
+
+        // Act
+        decimal result = terminal.CalculateTotal(card);
+
+        // Assert
+        result.ShouldBe(0m);
+        card.AccumulatedAmount.ShouldBe(0m);
+    }
+
+    [Fact]
+    public void CalculateTotal_WithNewCard_ShouldApplyNoDiscount()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        var card = new DiscountCard(); // 0% discount
+
+        foreach (char item in "ABCD")
+        {
+            terminal.Scan(item.ToString());
+        }
+
+        // Act
+        decimal result = terminal.CalculateTotal(card);
+
+        // Assert
+        // A: $1.25, B: $4.25, C: $1.00, D: $0.75 = $7.25
+        result.ShouldBe(7.25m);
+        card.AccumulatedAmount.ShouldBe(7.25m);
+    }
+
+    [Fact]
+    public void CalculateTotal_WithBronzeCard_ShouldApplyOnePercentDiscount()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        var card = new DiscountCard(1500m); // Bronze: 1% discount
+
+        foreach (char item in "BBBB")
+        {
+            terminal.Scan(item.ToString());
+        }
+
+        // Act
+        decimal result = terminal.CalculateTotal(card);
+
+        // Assert
+        // B: 4 * $4.25 = $17.00
+        // Discount: $17.00 * 0.01 = $0.17
+        // Total: $17.00 - $0.17 = $16.83
+        result.ShouldBe(16.83m);
+        card.AccumulatedAmount.ShouldBe(1500m + 17.00m);
+    }
+
+    [Fact]
+    public void CalculateTotal_WithSilverCard_ShouldApplyThreePercentDiscount()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        var card = new DiscountCard(2150m); // Silver: 3% discount
+
+        foreach (char item in "AAAABCDAAA")
+        {
+            terminal.Scan(item.ToString());
+        }
+
+        // Act
+        decimal result = terminal.CalculateTotal(card);
+
+        // Assert
+        // A: 7 items = 2 packs ($6.00) + 1 unit ($1.25) = $7.25
+        // B: 1 item = $4.25
+        // C: 1 item = $1.00
+        // D: 1 item = $0.75
+        // Total before card: $13.25
+        // Card eligible: $1.25 + $4.25 + $1.00 + $0.75 = $7.25 (no volume packs)
+        // Discount: $7.25 * 0.03 = $0.2175
+        // Total: $13.25 - $0.2175 = $13.0325
+        result.ShouldBe(13.0325m);
+        card.AccumulatedAmount.ShouldBe(2150m + 14.75m); // Gross: 7 * $1.25 + $4.25 + $1.00 + $0.75 = $8.75 + $6 = $14.75
+    }
+
+    [Fact]
+    public void CalculateTotal_WithGoldCard_ShouldApplyFivePercentDiscount()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        var card = new DiscountCard(6000m); // Gold: 5% discount
+
+        foreach (char item in "DDDDDDDD")
+        {
+            terminal.Scan(item.ToString());
+        }
+
+        // Act
+        decimal result = terminal.CalculateTotal(card);
+
+        // Assert
+        // D: 8 * $0.75 = $6.00
+        // Discount: $6.00 * 0.05 = $0.30
+        // Total: $6.00 - $0.30 = $5.70
+        result.ShouldBe(5.70m);
+        card.AccumulatedAmount.ShouldBe(6000m + 6.00m);
+    }
+
+    [Fact]
+    public void CalculateTotal_WithPlatinumCard_ShouldApplySevenPercentDiscount()
+    {
+        // Arrange
+        var terminal = CreateTerminalWithStandardPricing();
+        var card = new DiscountCard(15000m); // Platinum: 7% discount
+
+        foreach (char item in "ABCD")
+        {
+            terminal.Scan(item.ToString());
+        }
+
+        // Act
+        decimal result = terminal.CalculateTotal(card);
+
+        // Assert
+        // A: $1.25, B: $4.25, C: $1.00, D: $0.75 = $7.25
+        // Discount: $7.25 * 0.07 = $0.5075
+        // Total: $7.25 - $0.5075 = $6.7425
+        result.ShouldBe(6.7425m);
+        card.AccumulatedAmount.ShouldBe(15000m + 7.25m);
+    }
+
+    #endregion
 }
