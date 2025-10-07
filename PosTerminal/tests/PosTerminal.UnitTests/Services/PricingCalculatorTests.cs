@@ -7,6 +7,8 @@ public class PricingCalculatorTests
 {
     private readonly PricingCalculator _calculator = new();
 
+    #region CalculatePrice
+
     [Theory]
     [InlineData(0, 0)]
     [InlineData(1, 1.25)]
@@ -82,4 +84,90 @@ public class PricingCalculatorTests
         Should.Throw<ArgumentException>(() => _calculator.CalculatePrice(product, -1))
             .Message.ShouldContain("Quantity cannot be negative");
     }
+
+    #endregion
+
+    #region CalculateBreakdown
+
+    [Fact]
+    public void CalculateBreakdown_ProductWithoutVolumePrice_ShouldReturnCorrectBreakdown()
+    {
+        // Arrange
+        var product = new Product("B", 4.25m);
+
+        // Act
+        var breakdown = _calculator.CalculateBreakdown(product, 3);
+
+        // Assert
+        breakdown.TotalPrice.ShouldBe(12.75m); // 3 * $4.25
+        breakdown.CardEligibleAmount.ShouldBe(12.75m); // All eligible for card discount
+        breakdown.GrossAmount.ShouldBe(12.75m); // Gross same as unit price total
+    }
+
+    [Fact]
+    public void CalculateBreakdown_ProductWithVolumePrice_ShouldHaveZeroCardEligible()
+    {
+        // Arrange
+        var volumePricing = new VolumePricing(3, 3.00m);
+        var product = new Product("A", 1.25m, volumePricing);
+
+        // Act
+        var breakdown = _calculator.CalculateBreakdown(product, 6);
+
+        // Assert
+        breakdown.TotalPrice.ShouldBe(6.00m); // 2 packs * $3.00
+        breakdown.CardEligibleAmount.ShouldBe(0m); // No remainder, nothing eligible
+        breakdown.GrossAmount.ShouldBe(7.50m); // 6 * $1.25 gross
+    }
+
+    [Fact]
+    public void CalculateBreakdown_ProductWithVolumePrice_ShouldHaveCorrectBreakdown()
+    {
+        // Arrange
+        var volumePricing = new VolumePricing(3, 3.00m);
+        var product = new Product("A", 1.25m, volumePricing);
+
+        // Act
+        var breakdown = _calculator.CalculateBreakdown(product, 7);
+
+        // Assert
+        breakdown.TotalPrice.ShouldBe(7.25m); // 2 packs * $3.00 + 1 * $1.25
+        breakdown.CardEligibleAmount.ShouldBe(1.25m); // Only remainder eligible
+        breakdown.GrossAmount.ShouldBe(8.75m); // 7 * $1.25 gross
+    }
+
+    [Fact]
+    public void CalculateBreakdown_ZeroQuantity_ShouldReturnZeroBreakdown()
+    {
+        // Arrange
+        var product = new Product("A", 1.25m);
+
+        // Act
+        var breakdown = _calculator.CalculateBreakdown(product, 0);
+
+        // Assert
+        breakdown.TotalPrice.ShouldBe(0m);
+        breakdown.CardEligibleAmount.ShouldBe(0m);
+        breakdown.GrossAmount.ShouldBe(0m);
+    }
+    
+    [Fact]
+    public void CalculateBreakdown_WithNegativeQuantity_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var product = new Product("A", 1.25m);
+
+        // Act & Assert
+        Should.Throw<ArgumentException>(() => _calculator.CalculateBreakdown(product, -1))
+            .Message.ShouldContain("Quantity cannot be negative");
+    }
+
+    [Fact]
+    public void CalculateBreakdown_WithNullProduct_ShouldThrowArgumentNullException()
+    {
+        // Act & Assert
+        Should.Throw<ArgumentNullException>(() => _calculator.CalculateBreakdown(null!, 1));
+    }
+    
+    #endregion
 }
