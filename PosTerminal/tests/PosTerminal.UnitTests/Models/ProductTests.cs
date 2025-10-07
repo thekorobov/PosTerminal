@@ -39,7 +39,7 @@ public class ProductTests
     public void Constructor_WithInvalidCode_ShouldThrowArgumentException(string? invalidCode)
     {
         // Act & Assert
-        Should.Throw<ArgumentException>(() => new Product(invalidCode, 1.25m))
+        Should.Throw<ArgumentException>(() => new Product(invalidCode!, 1.25m))
             .Message.ShouldContain("Product code cannot be null or empty");
     }
 
