@@ -76,7 +76,7 @@ public sealed class PricingCalculator
     private static decimal CalculateWithVolume(Product product, int quantity)
     {
         var pricing = product.VolumePricing!;
-        var (packs, remainder)= SplitIntoPacks(quantity, pricing.Quantity);
+        var (packs, remainder) = SplitIntoPacks(quantity, pricing.Quantity);
         return packs * pricing.Price + remainder * product.UnitPrice;
     }
 

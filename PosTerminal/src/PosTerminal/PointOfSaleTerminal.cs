@@ -130,8 +130,8 @@ public sealed class PointOfSaleTerminal
 
         var list = products as List<Product> ?? products.ToList();
 
-        return list.Count == 0 
-            ? throw new ArgumentException("Products collection cannot be empty.", nameof(products)) 
+        return list.Count == 0
+            ? throw new ArgumentException("Products collection cannot be empty.", nameof(products))
             : list;
     }
 

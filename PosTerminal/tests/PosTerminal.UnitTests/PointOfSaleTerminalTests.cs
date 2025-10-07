@@ -297,7 +297,7 @@ public class PointOfSaleTerminalTests
         // Arrange
         var terminal = CreateTerminalWithStandardPricing();
         var card = new DiscountCard(); // 0% discount
-        
+
         foreach (char item in "ABCD")
         {
             terminal.Scan(item.ToString());
@@ -318,7 +318,7 @@ public class PointOfSaleTerminalTests
         // Arrange
         var terminal = CreateTerminalWithStandardPricing();
         var card = new DiscountCard(1500m); // Bronze: 1% discount
-        
+
         foreach (char item in "BBBB")
         {
             terminal.Scan(item.ToString());
@@ -341,7 +341,7 @@ public class PointOfSaleTerminalTests
         // Arrange
         var terminal = CreateTerminalWithStandardPricing();
         var card = new DiscountCard(2150m); // Silver: 3% discount
-        
+
         foreach (char item in "AAAABCDAAA")
         {
             terminal.Scan(item.ToString());
@@ -369,7 +369,7 @@ public class PointOfSaleTerminalTests
         // Arrange
         var terminal = CreateTerminalWithStandardPricing();
         var card = new DiscountCard(6000m); // Gold: 5% discount
-        
+
         foreach (char item in "DDDDDDDD")
         {
             terminal.Scan(item.ToString());
@@ -392,7 +392,7 @@ public class PointOfSaleTerminalTests
         // Arrange
         var terminal = CreateTerminalWithStandardPricing();
         var card = new DiscountCard(15000m); // Platinum: 7% discount
-        
+
         foreach (char item in "ABCD")
         {
             terminal.Scan(item.ToString());

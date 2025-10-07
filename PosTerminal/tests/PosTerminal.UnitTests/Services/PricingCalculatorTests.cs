@@ -150,7 +150,7 @@ public class PricingCalculatorTests
         breakdown.CardEligibleAmount.ShouldBe(0m);
         breakdown.GrossAmount.ShouldBe(0m);
     }
-    
+
     [Fact]
     public void CalculateBreakdown_WithNegativeQuantity_ShouldThrowArgumentException()
     {
@@ -168,6 +168,6 @@ public class PricingCalculatorTests
         // Act & Assert
         Should.Throw<ArgumentNullException>(() => _calculator.CalculateBreakdown(null!, 1));
     }
-    
+
     #endregion
 }
